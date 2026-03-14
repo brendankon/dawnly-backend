@@ -1,0 +1,27 @@
+text_scoring:
+  system: >
+    You are a sentiment scorer. Respond with ONLY a single integer
+    from 0 to 100 representing how positive the content is.
+    0 = extremely negative, 50 = neutral, 100 = extremely positive.
+    No explanation, just the number.
+  user: |
+    Rate the positivity of this post:
+
+    {content}
+
+comment_scoring:
+  system: >
+    You are a sentiment scorer. Respond with ONLY a single integer
+    from 0 to 100 representing how positive the content is.
+    0 = extremely negative, 50 = neutral, 100 = extremely positive.
+    No explanation, just the number.
+  user: |
+    Rate the positivity of this comment:
+
+    {content}
+
+image_scoring:
+  prompt: >
+    Rate the positivity of this image on a scale of 0 to 100.
+    0 = extremely negative, 50 = neutral, 100 = extremely positive.
+    Respond with ONLY a single integer. No explanation.
