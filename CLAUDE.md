@@ -52,7 +52,7 @@ posts: id, reddit_id, title, body, url, subreddit, feed (array),
 - Store fetched comments in top_comments column for debugging
 
 ## Scoring logic
-- Text scoring via Groq (llama-3.3-70b-versatile) — title + body
+- Text scoring via Groq (openai/gpt-oss-120b) — title + body
 - Comment scoring via Groq — average sentiment of top 5 comments
 - Image scoring via Gemini Flash — only if post has image
 - Score range 0–100 for each component
