@@ -130,17 +130,17 @@ async function runFetchAndScore() {
 
 function startScheduler() {
   // Temporarily disabled — re-enable when ready to fetch new data
-  // cron.schedule('*/25 * * * *', () => {
-  //   runFetchAndScore().catch((err) => {
-  //     console.error('[scheduler] Cron run failed:', err.message);
-  //   });
-  // });
+  cron.schedule('*/60 * * * *', () => {
+    runFetchAndScore().catch((err) => {
+      console.error('[scheduler] Cron run failed:', err.message);
+    });
+  });
 
-  // runFetchAndScore().catch((err) => {
-  //   console.error('[scheduler] Initial run failed:', err.message);
-  // });
+  runFetchAndScore().catch((err) => {
+    console.error('[scheduler] Initial run failed:', err.message);
+  });
 
-  console.log('[scheduler] Cron disabled — serving existing data only');
+  // console.log('[scheduler] Cron disabled — serving existing data only');
 }
 
 module.exports = { startScheduler, runFetchAndScore };
