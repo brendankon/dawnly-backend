@@ -69,7 +69,12 @@ async function groqScore(systemPrompt, userPrompt) {
       console.log(`[scorer] Scored using fallback model: ${model}`);
     }
     const raw = data.choices[0].message.content.trim();
-    const score = parseInt(raw, 10);
+    // Extract first number from response — handles "Score: 72", "72/100", etc.
+    const match = raw.match(/\d+/);
+    const score = match ? parseInt(match[0], 10) : NaN;
+    if (Number.isNaN(score)) {
+      console.warn(`[scorer] Could not parse score from Groq response: "${raw}"`);
+    }
     return Number.isNaN(score) ? 50 : Math.max(0, Math.min(100, score));
   }
 }
