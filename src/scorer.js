@@ -49,7 +49,7 @@ async function groqScore(systemPrompt, userPrompt) {
           { role: 'user', content: userPrompt },
         ],
         temperature: 0,
-        max_tokens: 256,
+        max_tokens: 700,
       }),
     });
 
