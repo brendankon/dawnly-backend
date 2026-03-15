@@ -49,7 +49,7 @@ async function groqScore(systemPrompt, userPrompt) {
           { role: 'user', content: userPrompt },
         ],
         temperature: 0,
-        max_tokens: 128,
+        max_tokens: 4,
       }),
     });
 
@@ -100,7 +100,7 @@ async function scoreComments(comments) {
   if (!comments || comments.length === 0) return 50;
 
   const numbered = comments
-    .map((c, i) => `Comment ${i + 1}: ${c}`)
+    .map((c, i) => `Comment ${i + 1}: ${c.slice(0, 500)}`)
     .join('\n\n');
 
   return groqScore(
