@@ -64,7 +64,14 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+let isRunning = false;
+
 async function runFetchAndScore() {
+  if (isRunning) {
+    console.log('[scheduler] Previous run still in progress, skipping');
+    return;
+  }
+  isRunning = true;
   console.log('[scheduler] Starting feed fetch...');
 
   const [popularPosts, newsPosts] = await Promise.all([
@@ -116,6 +123,7 @@ async function runFetchAndScore() {
   await deleteExpiredPosts();
 
   console.log(`[scheduler] Done. Scored: ${scored}, Skipped: ${skipped}`);
+  isRunning = false;
 }
 
 function startScheduler() {
