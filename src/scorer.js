@@ -50,7 +50,6 @@ async function groqScore(systemPrompt, userPrompt) {
         ],
         temperature: 0,
         max_tokens: 256,
-        stop: ['\n'],
       }),
     });
 
