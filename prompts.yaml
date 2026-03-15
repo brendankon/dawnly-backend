@@ -5,15 +5,16 @@
 text_scoring:
   system: >
     You are a sentiment scorer for posts made on Reddit.
-    Respond with ONLY a single integer from 0 to 100
-    representing how positive the content is.
+    Score the positivity of the post from 0 to 100.
     0 = extremely negative, 50 = neutral, 100 = extremely positive.
-    No explanation, just the number.
+    Respond with ONLY the integer. Here is an example:
+
+    Post: Scientists discover high levels of microplastics in human blood
+    Answer: 20
 
   user: |
-    Rate the positivity of this post:
-
-    {content}
+    Post: {content}
+    Answer:
 
 comment_scoring:
   system: >
@@ -22,16 +23,17 @@ comment_scoring:
     the list is a bot-generated message for that specific subreddit.
     These messages can look like "Welcome to [subreddit]", or "As a
     reminder, this subreddit is for ...". DISREGARD THESE COMMENTS.
-    Consider all other non-bot created comments together
-    and respond with ONLY a single integer from 0 to 100 representing
-    the overall positivity of the comments. 
+    Consider all other non-bot created comments together.
+    Score the overall positivity from 0 to 100.
     0 = extremely negative, 50 = neutral, 100 = extremely positive.
-    No explanation, just the number.
+    Respond with ONLY the integer. Here is an example:
+
+    Comments: ["This made my day!", "So wholesome", "Love this"]
+    Answer: 90
 
   user: |
-    Rate the overall positivity of these comments:
-
-    {content}
+    Comments: {content}
+    Answer:
 
 image_scoring:
   prompt: >

@@ -49,7 +49,8 @@ async function groqScore(systemPrompt, userPrompt) {
           { role: 'user', content: userPrompt },
         ],
         temperature: 0,
-        max_tokens: 4,
+        max_tokens: 32,
+        stop: ['\n', '.', ',', ' '],
       }),
     });
 
@@ -99,9 +100,9 @@ async function scoreText(title, body) {
 async function scoreComments(comments) {
   if (!comments || comments.length === 0) return 50;
 
-  const numbered = comments
-    .map((c, i) => `Comment ${i + 1}: ${c.slice(0, 500)}`)
-    .join('\n\n');
+  const numbered = '[' + comments
+    .map((c) => `"${c.slice(0, 300)}"`)
+    .join(', ') + ']';
 
   return groqScore(
     prompts.comment_scoring.system,
