@@ -1,10 +1,17 @@
+const fs = require('fs');
+const path = require('path');
+const yaml = require('js-yaml');
 const fetch = require('node-fetch');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL = 'openai/gpt-oss-120b';
 
-async function groqScore(prompt) {
+const prompts = yaml.load(
+  fs.readFileSync(path.join(__dirname, '..', 'prompts.yaml'), 'utf8')
+);
+
+async function groqScore(systemPrompt, userPrompt) {
   const res = await fetch(GROQ_URL, {
     method: 'POST',
     headers: {
@@ -14,11 +21,8 @@ async function groqScore(prompt) {
     body: JSON.stringify({
       model: GROQ_MODEL,
       messages: [
-        {
-          role: 'system',
-          content: 'You are a sentiment scorer. Respond with ONLY a single integer from 0 to 100 representing how positive the content is. 0 = extremely negative, 50 = neutral, 100 = extremely positive. No explanation, just the number.',
-        },
-        { role: 'user', content: prompt },
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
       ],
       temperature: 0,
       max_tokens: 8,
@@ -37,8 +41,11 @@ async function groqScore(prompt) {
 }
 
 async function scoreText(title, body) {
-  const text = `Title: ${title}\n${body || ''}`.trim();
-  return groqScore(`Rate the positivity of this post:\n\n${text}`);
+  const content = `Title: ${title}\n${body || ''}`.trim();
+  return groqScore(
+    prompts.text_scoring.system,
+    prompts.text_scoring.user.replace('{content}', content)
+  );
 }
 
 async function scoreComments(comments) {
@@ -46,7 +53,10 @@ async function scoreComments(comments) {
 
   const scores = await Promise.all(
     comments.map((c) =>
-      groqScore(`Rate the positivity of this comment:\n\n${c}`)
+      groqScore(
+        prompts.comment_scoring.system,
+        prompts.comment_scoring.user.replace('{content}', c)
+      )
     )
   );
 
@@ -67,10 +77,8 @@ async function scoreImage(imageUrl) {
   const mimeType = imageRes.headers.get('content-type') || 'image/jpeg';
 
   const result = await model.generateContent([
-    {
-      inlineData: { data: base64, mimeType },
-    },
-    'Rate the positivity of this image on a scale of 0 to 100. 0 = extremely negative, 50 = neutral, 100 = extremely positive. Respond with ONLY a single integer. No explanation.',
+    { inlineData: { data: base64, mimeType } },
+    prompts.image_scoring.prompt,
   ]);
 
   const raw = result.response.text().trim();
