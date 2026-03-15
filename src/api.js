@@ -3,6 +3,7 @@ const rateLimit = require('express-rate-limit');
 const { getFeed } = require('./db');
 
 const app = express();
+app.set('trust proxy', 1);
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
