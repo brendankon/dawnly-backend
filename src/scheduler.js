@@ -4,9 +4,40 @@ const { scorePost } = require('./scorer');
 const { deduplicatePosts } = require('./deduplicator');
 
 const USER_AGENT = 'Dawnly/1.0 (positive news reader)';
-const POPULAR_URL = 'https://www.reddit.com/r/popular.json?sort=hot&limit=100';
-const NEWS_URL = 'https://www.reddit.com/r/news+worldnews+politics+technology+science+business+environment+upliftingnews.json?sort=hot&limit=100';
+const POPULAR_URL = 'https://oauth.reddit.com/r/popular.json?sort=hot&limit=100';
+const NEWS_URL = 'https://oauth.reddit.com/r/news+worldnews+politics+technology+science+business+environment+upliftingnews.json?sort=hot&limit=100';
 const COMMENT_DELAY_MS = 7000;
+
+let cachedToken = null;
+let tokenExpiresAt = 0;
+
+async function getRedditToken() {
+  if (cachedToken && Date.now() < tokenExpiresAt) return cachedToken;
+
+  const clientId = process.env.REDDIT_CLIENT_ID;
+  const clientSecret = process.env.REDDIT_CLIENT_SECRET;
+
+  const res = await fetch('https://www.reddit.com/api/v1/access_token', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Basic ' + Buffer.from(`${clientId}:${clientSecret}`).toString('base64'),
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'User-Agent': USER_AGENT,
+    },
+    body: 'grant_type=client_credentials',
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Reddit auth failed ${res.status}: ${body}`);
+  }
+
+  const data = await res.json();
+  cachedToken = data.access_token;
+  tokenExpiresAt = Date.now() + (data.expires_in - 60) * 1000;
+  console.log('[scheduler] Reddit OAuth token acquired');
+  return cachedToken;
+}
 
 function parseRedditPost(child) {
   const d = child.data;
@@ -34,8 +65,12 @@ function isImageUrl(url) {
 }
 
 async function fetchFeed(url) {
+  const token = await getRedditToken();
   const res = await fetch(url, {
-    headers: { 'User-Agent': USER_AGENT },
+    headers: {
+      'User-Agent': USER_AGENT,
+      'Authorization': `Bearer ${token}`,
+    },
   });
   if (!res.ok) throw new Error(`Reddit fetch failed ${res.status}: ${url}`);
   const json = await res.json();
@@ -45,9 +80,13 @@ async function fetchFeed(url) {
 }
 
 async function fetchComments(subreddit, postId) {
-  const url = `https://www.reddit.com/r/${subreddit}/comments/${postId}.json?limit=5&sort=top`;
+  const token = await getRedditToken();
+  const url = `https://oauth.reddit.com/r/${subreddit}/comments/${postId}.json?limit=5&sort=top`;
   const res = await fetch(url, {
-    headers: { 'User-Agent': USER_AGENT },
+    headers: {
+      'User-Agent': USER_AGENT,
+      'Authorization': `Bearer ${token}`,
+    },
   });
   if (!res.ok) return [];
 
