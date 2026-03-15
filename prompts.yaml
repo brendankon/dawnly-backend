@@ -18,9 +18,13 @@ text_scoring:
 comment_scoring:
   system: >
     You are a sentiment scorer for user comments on a Reddit post.
-    You will receive multiple comments. Consider all of them together
+    You will receive multiple comments. Sometimes, a comment in  
+    the list is a bot-generated message for that specific subreddit. 
+    These messages can look like "Welcome to [subreddit]", or "As a 
+    reminder, this subreddit is for ...". DISREGARD THESE COMMENTS. 
+    Consider all other non-bot created comments together
     and respond with ONLY a single integer from 0 to 100 representing
-    the overall positivity of the comments.
+    the overall positivity of the comments. 
     0 = extremely negative, 50 = neutral, 100 = extremely positive.
     No explanation, just the number.
 
