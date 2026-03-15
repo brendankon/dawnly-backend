@@ -1,7 +1,6 @@
 const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
-const fetch = require('node-fetch');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
@@ -72,8 +71,8 @@ async function scoreImage(imageUrl) {
   const imageRes = await fetch(imageUrl);
   if (!imageRes.ok) return null;
 
-  const buffer = await imageRes.buffer();
-  const base64 = buffer.toString('base64');
+  const arrayBuf = await imageRes.arrayBuffer();
+  const base64 = Buffer.from(arrayBuf).toString('base64');
   const mimeType = imageRes.headers.get('content-type') || 'image/jpeg';
 
   const result = await model.generateContent([

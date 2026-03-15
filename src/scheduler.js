@@ -1,5 +1,4 @@
 const cron = require('node-cron');
-const fetch = require('node-fetch');
 const { postExists, upsertPost, deleteExpiredPosts } = require('./db');
 const { scorePost } = require('./scorer');
 const { deduplicatePosts } = require('./deduplicator');
