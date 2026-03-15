@@ -19,8 +19,9 @@ app.get('/feed', async (req, res) => {
     const type = req.query.type || 'popular';
     const limit = parseInt(req.query.limit) || 50;
     const subs = req.query.subs ? req.query.subs.split(',') : null;
+    const minScore = parseInt(req.query.min_score) || 60;
 
-    const posts = await getFeed(type, limit, subs);
+    const posts = await getFeed(type, limit, subs, minScore);
     res.json({ posts });
   } catch (err) {
     console.error('[api] Feed error:', err.message);

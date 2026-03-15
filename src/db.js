@@ -21,12 +21,12 @@ async function upsertPost(post) {
   if (error) throw error;
 }
 
-async function getFeed(type, limit = 50, subs = null) {
+async function getFeed(type, limit = 50, subs = null, minScore = 60) {
   let query = supabase
     .from('posts')
     .select('*')
     .contains('feed', [type])
-    .gte('positivity_score', 60)
+    .gte('positivity_score', minScore)
     .gt('expires_at', new Date().toISOString())
     .order('positivity_score', { ascending: false })
     .limit(limit);
