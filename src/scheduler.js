@@ -39,7 +39,9 @@ async function fetchFeed(url) {
   });
   if (!res.ok) throw new Error(`Reddit fetch failed ${res.status}: ${url}`);
   const json = await res.json();
-  return json.data.children.map(parseRedditPost);
+  return json.data.children
+    .filter((child) => !child.data.is_video)
+    .map(parseRedditPost);
 }
 
 async function fetchComments(subreddit, postId) {
@@ -127,17 +129,18 @@ async function runFetchAndScore() {
 }
 
 function startScheduler() {
-  // Run every 25 minutes
-  cron.schedule('*/25 * * * *', () => {
-    runFetchAndScore().catch((err) => {
-      console.error('[scheduler] Cron run failed:', err.message);
-    });
-  });
+  // Temporarily disabled — re-enable when ready to fetch new data
+  // cron.schedule('*/25 * * * *', () => {
+  //   runFetchAndScore().catch((err) => {
+  //     console.error('[scheduler] Cron run failed:', err.message);
+  //   });
+  // });
 
-  // Also run immediately on startup
-  runFetchAndScore().catch((err) => {
-    console.error('[scheduler] Initial run failed:', err.message);
-  });
+  // runFetchAndScore().catch((err) => {
+  //   console.error('[scheduler] Initial run failed:', err.message);
+  // });
+
+  console.log('[scheduler] Cron disabled — serving existing data only');
 }
 
 module.exports = { startScheduler, runFetchAndScore };
