@@ -87,8 +87,10 @@ async function runFetchAndScore() {
     }
 
     // Fetch comments with rate limiting
+    console.log(`[scheduler] Processing post ${post.reddit_id} (${post.subreddit}): ${post.title.substring(0, 60)}`);
     const comments = await fetchComments(post.subreddit, post.reddit_id);
     post.top_comments = comments;
+    console.log(`[scheduler] Fetched ${comments.length} comments, waiting...`);
     await sleep(COMMENT_DELAY_MS);
 
     // Score the post
@@ -104,6 +106,7 @@ async function runFetchAndScore() {
         expires_at: expires.toISOString(),
       });
       scored++;
+      console.log(`[scheduler] Scored post ${post.reddit_id}: ${scores.positivity_score} (text=${scores.text_score} comment=${scores.comment_score} image=${scores.image_score})`);
     } catch (err) {
       console.error(`[scheduler] Failed to score post ${post.reddit_id}:`, err.message);
     }
@@ -116,8 +119,8 @@ async function runFetchAndScore() {
 }
 
 function startScheduler() {
-  // Run every 15 minutes
-  cron.schedule('*/15 * * * *', () => {
+  // Run every 25 minutes
+  cron.schedule('*/25 * * * *', () => {
     runFetchAndScore().catch((err) => {
       console.error('[scheduler] Cron run failed:', err.message);
     });

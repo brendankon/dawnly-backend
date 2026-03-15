@@ -54,7 +54,7 @@ posts: id, reddit_id, title, body, url, subreddit, feed (array),
 ## Scoring logic
 - Text scoring via Groq (openai/gpt-oss-120b) — title + body
 - Comment scoring via Groq — average sentiment of top 5 comments
-- Image scoring via Gemini Flash — only if post has image
+- Image scoring via Gemini (gemini-3.1-flash-lite, 15 RPM / 500 daily) — only if post has image
 - Score range 0–100 for each component
 
 ### Scoring weights

@@ -10,7 +10,17 @@ const prompts = yaml.load(
   fs.readFileSync(path.join(__dirname, '..', 'prompts.yaml'), 'utf8')
 );
 
+// Track last Groq call to enforce 30 RPM rate limit (2s between calls)
+let lastGroqCall = 0;
+const GROQ_DELAY_MS = 2100;
+
 async function groqScore(systemPrompt, userPrompt) {
+  const elapsed = Date.now() - lastGroqCall;
+  if (elapsed < GROQ_DELAY_MS) {
+    await new Promise((r) => setTimeout(r, GROQ_DELAY_MS - elapsed));
+  }
+  lastGroqCall = Date.now();
+
   const res = await fetch(GROQ_URL, {
     method: 'POST',
     headers: {
@@ -24,7 +34,7 @@ async function groqScore(systemPrompt, userPrompt) {
         { role: 'user', content: userPrompt },
       ],
       temperature: 0,
-      max_tokens: 8,
+      max_tokens: 128,
     }),
   });
 
@@ -50,23 +60,25 @@ async function scoreText(title, body) {
 async function scoreComments(comments) {
   if (!comments || comments.length === 0) return 50;
 
-  const scores = await Promise.all(
-    comments.map((c) =>
-      groqScore(
-        prompts.comment_scoring.system,
-        prompts.comment_scoring.user.replace('{content}', c)
-      )
-    )
-  );
+  const numbered = comments
+    .map((c, i) => `Comment ${i + 1}: ${c}`)
+    .join('\n\n');
 
-  return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+  return groqScore(
+    prompts.comment_scoring.system,
+    prompts.comment_scoring.user.replace('{content}', numbered)
+  );
 }
+
+// Track last Gemini call to enforce 15 RPM rate limit (4s between calls)
+let lastGeminiCall = 0;
+const GEMINI_DELAY_MS = 4500;
 
 async function scoreImage(imageUrl) {
   if (!imageUrl) return null;
 
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-3.1-flash-lite-preview' });
 
   const imageRes = await fetch(imageUrl);
   if (!imageRes.ok) return null;
@@ -74,6 +86,13 @@ async function scoreImage(imageUrl) {
   const arrayBuf = await imageRes.arrayBuffer();
   const base64 = Buffer.from(arrayBuf).toString('base64');
   const mimeType = imageRes.headers.get('content-type') || 'image/jpeg';
+
+  // Rate limit: wait if needed to stay under 15 RPM
+  const elapsed = Date.now() - lastGeminiCall;
+  if (elapsed < GEMINI_DELAY_MS) {
+    await new Promise((r) => setTimeout(r, GEMINI_DELAY_MS - elapsed));
+  }
+  lastGeminiCall = Date.now();
 
   const result = await model.generateContent([
     { inlineData: { data: base64, mimeType } },

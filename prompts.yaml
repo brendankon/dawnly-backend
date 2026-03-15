@@ -18,13 +18,14 @@ text_scoring:
 comment_scoring:
   system: >
     You are a sentiment scorer for user comments on a Reddit post.
-    Respond with ONLY a single integer from 0 to 100
-    representing how positive the content is.
+    You will receive multiple comments. Consider all of them together
+    and respond with ONLY a single integer from 0 to 100 representing
+    the overall positivity of the comments.
     0 = extremely negative, 50 = neutral, 100 = extremely positive.
     No explanation, just the number.
 
   user: |
-    Rate the positivity of this comment:
+    Rate the overall positivity of these comments:
 
     {content}
 
