@@ -68,7 +68,16 @@ async function groqScore(systemPrompt, userPrompt) {
     if (i > 0) {
       console.log(`[scorer] Scored using fallback model: ${model}`);
     }
-    const raw = data.choices[0].message.content.trim();
+    const raw = (data.choices[0].message.content || '').trim();
+    if (!raw) {
+      const reason = data.choices[0].finish_reason || 'unknown';
+      if (i < GROQ_MODELS.length - 1) {
+        console.warn(`[scorer] Empty response from ${model} (finish_reason: ${reason}), retrying with ${GROQ_MODELS[i + 1]}`);
+        continue;
+      }
+      console.warn(`[scorer] Empty response from ${model} (finish_reason: ${reason}), no more fallbacks`);
+      return 50;
+    }
     // Extract first number from response — handles "Score: 72", "72/100", etc.
     const match = raw.match(/\d+/);
     const score = match ? parseInt(match[0], 10) : NaN;
