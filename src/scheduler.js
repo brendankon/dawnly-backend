@@ -1,5 +1,4 @@
 const cron = require('node-cron');
-const fetch = require('node-fetch');
 const { postExists, upsertPost, deleteExpiredPosts } = require('./db');
 const { scorePost } = require('./scorer');
 const { deduplicatePosts } = require('./deduplicator');
@@ -40,7 +39,9 @@ async function fetchFeed(url) {
   });
   if (!res.ok) throw new Error(`Reddit fetch failed ${res.status}: ${url}`);
   const json = await res.json();
-  return json.data.children.map(parseRedditPost);
+  return json.data.children
+    .filter((child) => !child.data.is_video)
+    .map(parseRedditPost);
 }
 
 async function fetchComments(subreddit, postId) {
@@ -65,7 +66,14 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+let isRunning = false;
+
 async function runFetchAndScore() {
+  if (isRunning) {
+    console.log('[scheduler] Previous run still in progress, skipping');
+    return;
+  }
+  isRunning = true;
   console.log('[scheduler] Starting feed fetch...');
 
   const [popularPosts, newsPosts] = await Promise.all([
@@ -88,8 +96,10 @@ async function runFetchAndScore() {
     }
 
     // Fetch comments with rate limiting
+    console.log(`[scheduler] Processing post ${post.reddit_id} (${post.subreddit}): ${post.title.substring(0, 60)}`);
     const comments = await fetchComments(post.subreddit, post.reddit_id);
     post.top_comments = comments;
+    console.log(`[scheduler] Fetched ${comments.length} comments, waiting...`);
     await sleep(COMMENT_DELAY_MS);
 
     // Score the post
@@ -105,6 +115,7 @@ async function runFetchAndScore() {
         expires_at: expires.toISOString(),
       });
       scored++;
+      console.log(`[scheduler] Scored post ${post.reddit_id}: ${scores.positivity_score} (text=${scores.text_score} comment=${scores.comment_score} image=${scores.image_score})`);
     } catch (err) {
       console.error(`[scheduler] Failed to score post ${post.reddit_id}:`, err.message);
     }
@@ -114,20 +125,22 @@ async function runFetchAndScore() {
   await deleteExpiredPosts();
 
   console.log(`[scheduler] Done. Scored: ${scored}, Skipped: ${skipped}`);
+  isRunning = false;
 }
 
 function startScheduler() {
-  // Run every 15 minutes
-  cron.schedule('*/15 * * * *', () => {
-    runFetchAndScore().catch((err) => {
-      console.error('[scheduler] Cron run failed:', err.message);
-    });
-  });
+  // Temporarily disabled — re-enable when ready to fetch new data
+  // cron.schedule('*/25 * * * *', () => {
+  //   runFetchAndScore().catch((err) => {
+  //     console.error('[scheduler] Cron run failed:', err.message);
+  //   });
+  // });
 
-  // Also run immediately on startup
-  runFetchAndScore().catch((err) => {
-    console.error('[scheduler] Initial run failed:', err.message);
-  });
+  // runFetchAndScore().catch((err) => {
+  //   console.error('[scheduler] Initial run failed:', err.message);
+  // });
+
+  console.log('[scheduler] Cron disabled — serving existing data only');
 }
 
 module.exports = { startScheduler, runFetchAndScore };
