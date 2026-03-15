@@ -1,6 +1,6 @@
 const cron = require('node-cron');
 const { postExists, upsertPost, deleteExpiredPosts } = require('./db');
-const { scorePost } = require('./scorer');
+const { scorePost, resetModelIndex } = require('./scorer');
 const { deduplicatePosts } = require('./deduplicator');
 
 const USER_AGENT = 'Dawnly/1.0 (positive news reader)';
@@ -113,6 +113,7 @@ async function runFetchAndScore() {
     return;
   }
   isRunning = true;
+  resetModelIndex();
   console.log('[scheduler] Starting feed fetch...');
 
   const [popularPosts, newsPosts] = await Promise.all([

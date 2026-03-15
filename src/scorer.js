@@ -4,7 +4,11 @@ const yaml = require('js-yaml');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_MODEL = 'openai/gpt-oss-120b';
+const GROQ_MODELS = [
+  'openai/gpt-oss-120b',
+  'openai/gpt-oss-20b',
+  'llama-3.3-70b-versatile',
+];
 
 const prompts = yaml.load(
   fs.readFileSync(path.join(__dirname, '..', 'prompts.yaml'), 'utf8')
@@ -14,39 +18,60 @@ const prompts = yaml.load(
 let lastGroqCall = 0;
 const GROQ_DELAY_MS = 2100;
 
+// Track which model index to start from — persists across calls within a run
+// so once a model 429s, we skip it for all remaining posts
+let currentModelIndex = 0;
+
+function resetModelIndex() {
+  currentModelIndex = 0;
+}
+
 async function groqScore(systemPrompt, userPrompt) {
-  const elapsed = Date.now() - lastGroqCall;
-  if (elapsed < GROQ_DELAY_MS) {
-    await new Promise((r) => setTimeout(r, GROQ_DELAY_MS - elapsed));
+  for (let i = currentModelIndex; i < GROQ_MODELS.length; i++) {
+    const model = GROQ_MODELS[i];
+
+    const elapsed = Date.now() - lastGroqCall;
+    if (elapsed < GROQ_DELAY_MS) {
+      await new Promise((r) => setTimeout(r, GROQ_DELAY_MS - elapsed));
+    }
+    lastGroqCall = Date.now();
+
+    const res = await fetch(GROQ_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0,
+        max_tokens: 128,
+      }),
+    });
+
+    if (res.status === 429 && i < GROQ_MODELS.length - 1) {
+      console.warn(`[scorer] Groq 429 on ${model}, falling back to ${GROQ_MODELS[i + 1]} for remaining posts`);
+      currentModelIndex = i + 1;
+      continue;
+    }
+
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Groq API error ${res.status}: ${body}`);
+    }
+
+    const data = await res.json();
+    if (i > 0) {
+      console.log(`[scorer] Scored using fallback model: ${model}`);
+    }
+    const raw = data.choices[0].message.content.trim();
+    const score = parseInt(raw, 10);
+    return Number.isNaN(score) ? 50 : Math.max(0, Math.min(100, score));
   }
-  lastGroqCall = Date.now();
-
-  const res = await fetch(GROQ_URL, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: GROQ_MODEL,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      temperature: 0,
-      max_tokens: 128,
-    }),
-  });
-
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Groq API error ${res.status}: ${body}`);
-  }
-
-  const data = await res.json();
-  const raw = data.choices[0].message.content.trim();
-  const score = parseInt(raw, 10);
-  return Number.isNaN(score) ? 50 : Math.max(0, Math.min(100, score));
 }
 
 async function scoreText(title, body) {
@@ -126,4 +151,4 @@ async function scorePost(post) {
   };
 }
 
-module.exports = { scorePost, scoreText, scoreComments, scoreImage };
+module.exports = { scorePost, scoreText, scoreComments, scoreImage, resetModelIndex };
