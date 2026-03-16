@@ -145,16 +145,21 @@ async function scoreImage(imageUrl) {
 
 async function scorePost(post) {
   const textScore = await scoreText(post.title, post.body);
-  const commentScore = await scoreComments(post.top_comments);
+  const hasEnoughComments = post.top_comments && post.top_comments.length >= 3;
+  const commentScore = hasEnoughComments ? await scoreComments(post.top_comments) : null;
   const imageScore = await scoreImage(post.image_url);
 
   let positivityScore;
-  if (imageScore !== null) {
+  if (commentScore !== null && imageScore !== null) {
     positivityScore = Math.round(
       textScore * 0.3 + commentScore * 0.3 + imageScore * 0.4
     );
-  } else {
+  } else if (commentScore !== null) {
     positivityScore = Math.round(textScore * 0.6 + commentScore * 0.4);
+  } else if (imageScore !== null) {
+    positivityScore = Math.round(textScore * 0.4 + imageScore * 0.6);
+  } else {
+    positivityScore = textScore;
   }
 
   return {
