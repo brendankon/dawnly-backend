@@ -1,0 +1,16 @@
+name: Keep Alive
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Ping Render API
+        run: |
+          curl -sf "${{ secrets.RENDER_API_URL }}/feed?type=popular&limit=1" > /dev/null
+          echo "Ping successful"
