@@ -40,6 +40,16 @@ async function getFeed(type, limit = 50, subs = null, minScore = 60) {
   return data || [];
 }
 
+async function updatePostStats(redditId, { score, upvote_ratio, num_comments, feed }) {
+  const update = { score, upvote_ratio, num_comments };
+  if (feed) update.feed = feed;
+  const { error } = await supabase
+    .from('posts')
+    .update(update)
+    .eq('reddit_id', redditId);
+  if (error) throw error;
+}
+
 async function deleteExpiredPosts() {
   const { error } = await supabase
     .from('posts')
@@ -48,4 +58,4 @@ async function deleteExpiredPosts() {
   if (error) throw error;
 }
 
-module.exports = { supabase, postExists, upsertPost, getFeed, deleteExpiredPosts };
+module.exports = { supabase, postExists, upsertPost, updatePostStats, getFeed, deleteExpiredPosts };

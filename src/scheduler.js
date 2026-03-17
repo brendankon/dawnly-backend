@@ -1,5 +1,5 @@
 const cron = require('node-cron');
-const { postExists, upsertPost, deleteExpiredPosts } = require('./db');
+const { postExists, upsertPost, updatePostStats, deleteExpiredPosts } = require('./db');
 const { scorePost, resetModelIndex } = require('./scorer');
 const { deduplicatePosts } = require('./deduplicator');
 
@@ -131,6 +131,12 @@ async function runFetchAndScore() {
   for (const post of posts) {
     const exists = await postExists(post.reddit_id);
     if (exists) {
+      await updatePostStats(post.reddit_id, {
+        score: post.score,
+        upvote_ratio: post.upvote_ratio,
+        num_comments: post.num_comments,
+        feed: post.feed,
+      });
       skipped++;
       continue;
     }
