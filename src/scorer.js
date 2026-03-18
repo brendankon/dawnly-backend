@@ -8,6 +8,7 @@ const GROQ_MODELS = [
   'openai/gpt-oss-120b',
   'openai/gpt-oss-20b',
   'llama-3.3-70b-versatile',
+  'meta-llama/llama-4-scout-17b-16e-instruct',
 ];
 
 const prompts = yaml.load(
@@ -18,16 +19,8 @@ const prompts = yaml.load(
 let lastGroqCall = 0;
 const GROQ_DELAY_MS = 2100;
 
-// Track which model index to start from — persists across calls within a run
-// so once a model 429s, we skip it for all remaining posts
-let currentModelIndex = 0;
-
-function resetModelIndex() {
-  currentModelIndex = 0;
-}
-
 async function groqScore(systemPrompt, userPrompt) {
-  for (let i = currentModelIndex; i < GROQ_MODELS.length; i++) {
+  for (let i = 0; i < GROQ_MODELS.length; i++) {
     const model = GROQ_MODELS[i];
 
     const elapsed = Date.now() - lastGroqCall;
@@ -54,8 +47,7 @@ async function groqScore(systemPrompt, userPrompt) {
     });
 
     if (res.status === 429 && i < GROQ_MODELS.length - 1) {
-      console.warn(`[scorer] Groq 429 on ${model}, falling back to ${GROQ_MODELS[i + 1]} for remaining posts`);
-      currentModelIndex = i + 1;
+      console.warn(`[scorer] Groq 429 on ${model}, falling back to ${GROQ_MODELS[i + 1]}`);
       continue;
     }
 
@@ -170,4 +162,4 @@ async function scorePost(post) {
   };
 }
 
-module.exports = { scorePost, scoreText, scoreComments, scoreImage, resetModelIndex };
+module.exports = { scorePost, scoreText, scoreComments, scoreImage };
