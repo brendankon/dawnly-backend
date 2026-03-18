@@ -64,19 +64,32 @@ function isImageUrl(url) {
     url.includes('i.imgur.com');
 }
 
-async function fetchFeed(url) {
+async function fetchFeed(url, targetCount = 150) {
   const token = await getRedditToken();
-  const res = await fetch(url, {
-    headers: {
-      'User-Agent': USER_AGENT,
-      'Authorization': `Bearer ${token}`,
-    },
-  });
-  if (!res.ok) throw new Error(`Reddit fetch failed ${res.status}: ${url}`);
-  const json = await res.json();
-  return json.data.children
-    .filter((child) => !child.data.is_video)
-    .map(parseRedditPost);
+  let allPosts = [];
+  let after = null;
+
+  while (allPosts.length < targetCount) {
+    const pageUrl = after ? `${url}&after=${after}` : url;
+    const res = await fetch(pageUrl, {
+      headers: {
+        'User-Agent': USER_AGENT,
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    if (!res.ok) throw new Error(`Reddit fetch failed ${res.status}: ${pageUrl}`);
+    const json = await res.json();
+
+    const posts = json.data.children
+      .filter((child) => !child.data.is_video)
+      .map(parseRedditPost);
+    allPosts = allPosts.concat(posts);
+
+    after = json.data.after;
+    if (!after) break; // no more pages
+  }
+
+  return allPosts.slice(0, targetCount);
 }
 
 async function fetchComments(subreddit, postId) {
