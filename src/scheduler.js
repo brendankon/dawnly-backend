@@ -47,6 +47,7 @@ function parseRedditPost(child) {
     title: d.title,
     body: d.selftext || null,
     url: d.url,
+    permalink: `https://www.reddit.com${d.permalink}`,
     subreddit: d.subreddit,
     score: d.score,
     upvote_ratio: d.upvote_ratio,
