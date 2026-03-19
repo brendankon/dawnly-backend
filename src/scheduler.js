@@ -156,8 +156,11 @@ async function runFetchAndScore() {
       if (post.image_url) {
         try {
           const headRes = await fetch(post.image_url, { method: 'HEAD' });
-          if (headRes.status === 404 || headRes.status === 403) {
-            console.log(`[scheduler] Image gone (${headRes.status}) for post ${post.reddit_id}, deleting from DB`);
+          const status = headRes.status;
+          const contentLength = parseInt(headRes.headers.get('content-length') || '0', 10);
+          // Reddit serves a ~1KB placeholder image when the original is deleted
+          if (status === 404 || status === 403 || (status === 200 && contentLength > 0 && contentLength < 5000)) {
+            console.log(`[scheduler] Image gone for post ${post.reddit_id} (status=${status}, size=${contentLength}), deleting from DB`);
             await deletePost(post.reddit_id);
             skipped++;
             continue;
