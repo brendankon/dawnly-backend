@@ -81,7 +81,7 @@ async function fetchFeed(url, targetCount = 150) {
     const json = await res.json();
 
     const posts = json.data.children
-      .filter((child) => !child.data.is_video)
+      .filter((child) => !child.data.is_video && !child.data.over_18)
       .map(parseRedditPost);
     allPosts = allPosts.concat(posts);
 
