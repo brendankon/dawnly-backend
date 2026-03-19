@@ -1,5 +1,5 @@
 const cron = require('node-cron');
-const { postExists, upsertPost, updatePostStats, deletePost, deleteExpiredPosts } = require('./db');
+const { postExists, upsertPost, updatePostStats, getPostsWithImages, deletePost, deleteExpiredPosts } = require('./db');
 const { scorePost } = require('./scorer');
 const { deduplicatePosts } = require('./deduplicator');
 
@@ -139,8 +139,10 @@ async function runFetchAndScore() {
 
   let scored = 0;
   let skipped = 0;
+  const checkedIds = new Set();
 
   for (const post of posts) {
+    checkedIds.add(post.reddit_id);
     const exists = await postExists(post.reddit_id);
     if (exists) {
       // Check if the post has been removed/deleted by mods
@@ -204,6 +206,34 @@ async function runFetchAndScore() {
     } catch (err) {
       console.error(`[scheduler] Failed to score post ${post.reddit_id}:`, err.message);
     }
+  }
+
+  // Sweep DB for deleted images on posts not already checked above
+  try {
+    const dbPosts = await getPostsWithImages();
+    const toCheck = dbPosts.filter((p) => !checkedIds.has(p.reddit_id));
+    if (toCheck.length > 0) {
+      console.log(`[scheduler] Checking ${toCheck.length} DB posts for deleted images...`);
+      let deleted = 0;
+      for (const post of toCheck) {
+        try {
+          const headRes = await fetch(post.image_url, { method: 'HEAD' });
+          const status = headRes.status;
+          const contentLength = parseInt(headRes.headers.get('content-length') || '0', 10);
+          if (status === 404 || status === 403 || (status === 200 && contentLength > 0 && contentLength < 5000)) {
+            console.log(`[scheduler] Image gone for DB post ${post.reddit_id} (status=${status}, size=${contentLength}), deleting`);
+            await deletePost(post.reddit_id);
+            deleted++;
+          }
+        } catch (err) {
+          console.warn(`[scheduler] Image check failed for DB post ${post.reddit_id}: ${err.message}`);
+        }
+        await sleep(800);
+      }
+      console.log(`[scheduler] Image sweep done. Deleted ${deleted}/${toCheck.length} posts`);
+    }
+  } catch (err) {
+    console.error(`[scheduler] Image sweep failed: ${err.message}`);
   }
 
   // Clean up expired posts

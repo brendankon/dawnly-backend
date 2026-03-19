@@ -50,6 +50,16 @@ async function updatePostStats(redditId, { score, upvote_ratio, num_comments, fe
   if (error) throw error;
 }
 
+async function getPostsWithImages() {
+  const { data, error } = await supabase
+    .from('posts')
+    .select('reddit_id, image_url')
+    .not('image_url', 'is', null)
+    .gt('expires_at', new Date().toISOString());
+  if (error) throw error;
+  return data || [];
+}
+
 async function deletePost(redditId) {
   const { error } = await supabase
     .from('posts')
@@ -66,4 +76,4 @@ async function deleteExpiredPosts() {
   if (error) throw error;
 }
 
-module.exports = { supabase, postExists, upsertPost, updatePostStats, getFeed, deletePost, deleteExpiredPosts };
+module.exports = { supabase, postExists, upsertPost, updatePostStats, getFeed, getPostsWithImages, deletePost, deleteExpiredPosts };
