@@ -1,5 +1,5 @@
 const cron = require('node-cron');
-const { postExists, upsertPost, updatePostStats, deleteExpiredPosts } = require('./db');
+const { postExists, upsertPost, updatePostStats, deletePost, deleteExpiredPosts } = require('./db');
 const { scorePost } = require('./scorer');
 const { deduplicatePosts } = require('./deduplicator');
 
@@ -143,6 +143,30 @@ async function runFetchAndScore() {
   for (const post of posts) {
     const exists = await postExists(post.reddit_id);
     if (exists) {
+      // Check if the post has been removed/deleted by mods
+      const bodyText = (post.body || '').trim();
+      if (bodyText === '[removed]' || bodyText === '[deleted]' || post.title === '[deleted by user]') {
+        console.log(`[scheduler] Post ${post.reddit_id} removed/deleted, deleting from DB`);
+        await deletePost(post.reddit_id);
+        skipped++;
+        continue;
+      }
+
+      // Check if the image is still accessible
+      if (post.image_url) {
+        try {
+          const headRes = await fetch(post.image_url, { method: 'HEAD' });
+          if (headRes.status === 404 || headRes.status === 403) {
+            console.log(`[scheduler] Image gone (${headRes.status}) for post ${post.reddit_id}, deleting from DB`);
+            await deletePost(post.reddit_id);
+            skipped++;
+            continue;
+          }
+        } catch (err) {
+          console.warn(`[scheduler] Image check failed for ${post.reddit_id}: ${err.message}`);
+        }
+      }
+
       await updatePostStats(post.reddit_id, {
         score: post.score,
         upvote_ratio: post.upvote_ratio,

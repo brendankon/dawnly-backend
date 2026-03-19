@@ -50,6 +50,14 @@ async function updatePostStats(redditId, { score, upvote_ratio, num_comments, fe
   if (error) throw error;
 }
 
+async function deletePost(redditId) {
+  const { error } = await supabase
+    .from('posts')
+    .delete()
+    .eq('reddit_id', redditId);
+  if (error) throw error;
+}
+
 async function deleteExpiredPosts() {
   const { error } = await supabase
     .from('posts')
@@ -58,4 +66,4 @@ async function deleteExpiredPosts() {
   if (error) throw error;
 }
 
-module.exports = { supabase, postExists, upsertPost, updatePostStats, getFeed, deleteExpiredPosts };
+module.exports = { supabase, postExists, upsertPost, updatePostStats, getFeed, deletePost, deleteExpiredPosts };
