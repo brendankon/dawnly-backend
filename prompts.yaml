@@ -49,3 +49,4 @@ image_scoring:
 
     0 = extremely negative, 50 = neutral, 100 = extremely positive.
     Respond with ONLY a single integer. No explanation.
+
