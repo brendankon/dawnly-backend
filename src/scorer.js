@@ -7,8 +7,8 @@ const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODELS = [
   'openai/gpt-oss-120b',
   'openai/gpt-oss-20b',
-  'llama-3.3-70b-versatile',
-  'meta-llama/llama-4-scout-17b-16e-instruct',
+  'qwen/qwen3.8-27b',
+  'qwen/qwen3.6-27b',
 ];
 
 const prompts = yaml.load(
