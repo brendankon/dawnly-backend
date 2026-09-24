@@ -109,7 +109,7 @@ async function scoreImage(imageUrl) {
   if (!imageUrl) return null;
 
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  const model = genAI.getGenerativeModel({ model: 'gemini-3.1-flash-lite-preview' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash-lite' });
 
   const imageRes = await fetch(imageUrl);
   if (!imageRes.ok) return null;
